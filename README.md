@@ -6,11 +6,11 @@ This repo contains John Crickett's coding challenge: [Build Your Own wc Tool](ht
 
 - [Git](https://git-scm.com/)
 - [Go](https://go.dev/) [Version used: `1.25.5`]
-- [VS Code](https://code.visualstudio.com/)
+- [VS Code](https://code.visualstudio.com/) with Go extension installed
 
 ## External dependencies/packages
 
-- [Cobra](github.com/spf13/cobra)
+- [Cobra](https://github.com/spf13/cobra)
 
 ## Building the project
 
