@@ -24,74 +24,26 @@ var rootCommand = &cobra.Command{
 	Long:  "CLI utility to calculate words, lines, characters and bytes",
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-
+		// Determine which counts to calculate
 		if calculateBytes {
 			calculateCharacters, calculateWords, calculateLines = false, false, false
-
 		} else if !calculateCharacters && !calculateWords && !calculateLines {
-			// Step 5
 			// If no explicit flags are set, default to -c -l -w
 			calculateCharacters, calculateWords, calculateLines = true, true, true
 			calculateBytes = false
 		}
 
-		var (
-			content  []byte
-			filePath string
-		)
-
-		if len(args) == 0 {
-			// Step 5
-			stdInContent, err := io.ReadAll(os.Stdin)
-
-			if err != nil {
-				return err
-			}
-
-			content = stdInContent
-		} else {
-			filePath = args[0]
-			_, err := os.Stat(filePath)
-
-			if err != nil {
-				return err
-			}
-
-			content, err = os.ReadFile(filePath)
-
-			if err != nil {
-				return err
-			}
+		// Read content from file or stdin
+		content, filePath, err := readInput(args)
+		if err != nil {
+			return err
 		}
 
-		var (
-			charactersCount, wordsCount, linesCount, bytesCount = 0, 0, 0, 0
-		)
+		// Calculate requested metrics
+		counts := calculateCounts(content, calculateLines, calculateWords, calculateCharacters)
 
-		if calculateBytes {
-			// Step 1: Calculate number of bytes
-			bytesCount = len(content)
-		}
-
-		if calculateLines {
-			// Step 2: Calculate number of lines
-			textContent := string(content)
-			linesCount = len(strings.Split(textContent, "\n"))
-		}
-
-		if calculateWords {
-			// Step 3: Calculate number of words
-			textContent := string(content)
-			wordsCount = len(strings.Fields(textContent))
-		}
-
-		if calculateCharacters {
-			// Step 4: Calculate number of characters
-			// utf8.RuneCountInString() counts the actual number of Unicode characters (runes).
-			charactersCount = utf8.RuneCountInString(string(content))
-		}
-
-		fmt.Printf("%s %s", buildOutputBasedOnFlag(charactersCount, wordsCount, linesCount, bytesCount), filePath)
+		// Build and print output
+		fmt.Printf("%s %s", buildOutputBasedOnFlag(counts), filePath)
 
 		return nil
 	},
@@ -111,26 +63,81 @@ func Execute() {
 	}
 }
 
-func buildOutputBasedOnFlag(charactersCount int, wordsCount int, linesCount int, bytesCount int) string {
+// counts holds the calculated metrics for the input
+type counts struct {
+	characters int
+	words      int
+	lines      int
+	bytes      int
+}
+
+// readInput reads content from a file or stdin
+func readInput(args []string) ([]byte, string, error) {
+	if len(args) == 0 {
+		content, err := io.ReadAll(os.Stdin)
+		return content, "", err
+	}
+
+	filePath := args[0]
+	if _, err := os.Stat(filePath); err != nil {
+		return nil, "", err
+	}
+
+	content, err := os.ReadFile(filePath)
+	return content, filePath, err
+}
+
+// calculateCounts calculates requested metrics from the content
+func calculateCounts(content []byte, needLines, needWords, needChars bool) counts {
+	c := counts{
+		bytes: len(content),
+	}
+
+	// Only convert to string if we need text-based metrics
+	if !needLines && !needWords && !needChars {
+		return c
+	}
+
+	// Convert to string once for all text operations
+	textContent := string(content)
+
+	if needLines {
+		// Count newlines (matches standard wc -l behavior)
+		c.lines = strings.Count(textContent, "\n")
+	}
+
+	if needWords {
+		c.words = len(strings.Fields(textContent))
+	}
+
+	if needChars {
+		c.characters = utf8.RuneCountInString(textContent)
+	}
+
+	return c
+}
+
+// buildOutputBasedOnFlag formats the output based on active flags
+func buildOutputBasedOnFlag(c counts) string {
 	var sb strings.Builder
 
 	if calculateCharacters {
-		sb.WriteString(strconv.Itoa(charactersCount))
+		sb.WriteString(strconv.Itoa(c.characters))
 		sb.WriteString("\t")
 	}
 
 	if calculateWords {
-		sb.WriteString(strconv.Itoa(wordsCount))
+		sb.WriteString(strconv.Itoa(c.words))
 		sb.WriteString("\t")
 	}
 
 	if calculateLines {
-		sb.WriteString(strconv.Itoa(linesCount))
+		sb.WriteString(strconv.Itoa(c.lines))
 		sb.WriteString("\t")
 	}
 
 	if calculateBytes {
-		sb.WriteString(strconv.Itoa(bytesCount))
+		sb.WriteString(strconv.Itoa(c.bytes))
 		sb.WriteString("\t")
 	}
 
