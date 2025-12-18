@@ -40,7 +40,7 @@ var rootCommand = &cobra.Command{
 		}
 
 		// Calculate requested metrics
-		counts := calculateCounts(content)
+		counts := calculateCounts(content, calculateLines, calculateWords, calculateCharacters)
 
 		// Build and print output
 		fmt.Printf("%s %s", buildOutputBasedOnFlag(counts), filePath)
@@ -87,25 +87,30 @@ func readInput(args []string) ([]byte, string, error) {
 	return content, filePath, err
 }
 
-// calculateCounts calculates all metrics from the content
-func calculateCounts(content []byte) counts {
+// calculateCounts calculates requested metrics from the content
+func calculateCounts(content []byte, needLines, needWords, needChars bool) counts {
 	c := counts{
 		bytes: len(content),
+	}
+
+	// Only convert to string if we need text-based metrics
+	if !needLines && !needWords && !needChars {
+		return c
 	}
 
 	// Convert to string once for all text operations
 	textContent := string(content)
 
-	if calculateLines {
+	if needLines {
 		// Count newlines (matches standard wc -l behavior)
 		c.lines = strings.Count(textContent, "\n")
 	}
 
-	if calculateWords {
+	if needWords {
 		c.words = len(strings.Fields(textContent))
 	}
 
-	if calculateCharacters {
+	if needChars {
 		c.characters = utf8.RuneCountInString(textContent)
 	}
 
