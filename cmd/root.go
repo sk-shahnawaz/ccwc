@@ -97,11 +97,8 @@ func calculateCounts(content []byte) counts {
 	textContent := string(content)
 
 	if calculateLines {
-		// Count newlines, adding 1 if content doesn't end with newline
+		// Count newlines (matches standard wc -l behavior)
 		c.lines = strings.Count(textContent, "\n")
-		if len(textContent) > 0 && !strings.HasSuffix(textContent, "\n") {
-			c.lines++
-		}
 	}
 
 	if calculateWords {
